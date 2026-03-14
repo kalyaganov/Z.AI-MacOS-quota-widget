@@ -37,7 +37,7 @@ struct ZaiSubscriptionWidgetApp: App {
     @StateObject private var viewModel = UsageViewModel.shared
     
     var body: some Scene {
-        MenuBarExtra("Z.AI", systemImage: "gauge") {
+        MenuBarExtra("Z.AI", image: "MenuBarIcon") {
             MenuBarView(viewModel: viewModel, onOpenSettings: {
                 appDelegate.showSettingsWindow()
             })

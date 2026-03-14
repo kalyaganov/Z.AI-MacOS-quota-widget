@@ -1,6 +1,12 @@
-# Z.AI Subscription Widget
+<div align="center">
+  <img src="icon.png" alt="Z.AI Subscription Widget" width="128" height="128">
+  
+  # Z.AI Subscription Widget
+  
+  A native macOS menu bar app to monitor your Z.AI Coding Plan subscription usage
+</div>
 
-A native macOS menu bar app to monitor your Z.AI Coding Plan subscription usage.
+---
 
 ![Screenshot](screenshots/screenshot.png)
 
@@ -51,22 +57,6 @@ open ZaiSubscriptionWidget.xcodeproj
 5. Click Save
 
 Get your API key from: https://z.ai/manage-apikey/apikey-list
-
-## Menu Bar Icon
-
-The menu bar icon should be placed at:
-```
-ZaiSubscriptionWidget/Assets.xcassets/MenuBarIcon.imageset/
-├── MenuBarIcon@1x.png  (16x16 pixels)
-└── MenuBarIcon@2x.png  (32x32 pixels)
-```
-
-For now, the app uses a placeholder. You can:
-1. Create a simple Z.AI logo at 16x16 and 32x32
-2. Or modify `ZaiSubscriptionWidgetApp.swift` to use a system icon:
-   ```swift
-   MenuBarExtra("Z.AI", systemImage: "gauge") { ... }
-   ```
 
 ## API Endpoints Used
 
