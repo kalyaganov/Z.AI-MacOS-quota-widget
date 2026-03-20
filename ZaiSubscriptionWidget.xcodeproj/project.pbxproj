@@ -16,6 +16,7 @@
 		A11111110000000000000007 /* ModelUsage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A12222220000000000000007 /* ModelUsage.swift */; };
 		A11111110000000000000008 /* ToolUsage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A12222220000000000000008 /* ToolUsage.swift */; };
 		A11111110000000000000009 /* QuotaLimit.swift in Sources */ = {isa = PBXBuildFile; fileRef = A12222220000000000000009 /* QuotaLimit.swift */; };
+		A1111111000000000000000D /* Account.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1222222000000000000000D /* Account.swift */; };
 		A1111111000000000000000A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1222222000000000000000A /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
@@ -30,6 +31,7 @@
 		A12222220000000000000007 /* ModelUsage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelUsage.swift; sourceTree = "<group>"; };
 		A12222220000000000000008 /* ToolUsage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolUsage.swift; sourceTree = "<group>"; };
 		A12222220000000000000009 /* QuotaLimit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotaLimit.swift; sourceTree = "<group>"; };
+		A1222222000000000000000D /* Account.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Account.swift; sourceTree = "<group>"; };
 		A1222222000000000000000A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A1222222000000000000000B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A1222222000000000000000C /* Entitlements.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Entitlements.entitlements; sourceTree = "<group>"; };
@@ -80,6 +82,7 @@
 		A15555550000000000000004 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				A1222222000000000000000D /* Account.swift */,
 				A12222220000000000000007 /* ModelUsage.swift */,
 				A12222220000000000000008 /* ToolUsage.swift */,
 				A12222220000000000000009 /* QuotaLimit.swift */,
@@ -191,6 +194,7 @@
 				A11111110000000000000007 /* ModelUsage.swift in Sources */,
 				A11111110000000000000008 /* ToolUsage.swift in Sources */,
 				A11111110000000000000009 /* QuotaLimit.swift in Sources */,
+				A1111111000000000000000D /* Account.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
