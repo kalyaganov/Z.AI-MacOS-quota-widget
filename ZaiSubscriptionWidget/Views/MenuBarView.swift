@@ -65,6 +65,9 @@ struct MenuBarView: View {
             Divider()
             quotaSection
             
+            Divider()
+            costWindowSection
+            
             if let error = viewModel.error {
                 Divider()
                 errorView(error)
@@ -134,6 +137,35 @@ struct MenuBarView: View {
                 }
             }
         }
+    }
+    
+    private var costWindowSection: some View {
+        let costWindow = viewModel.currentCostWindow
+        return HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("GLM-5 Usage Window")
+                    .font(.caption2)
+                    .fontWeight(.medium)
+                    .foregroundColor(.secondary)
+                
+                HStack(spacing: 4) {
+                    Text(costWindow.displayName)
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(costWindow == .peak ? .orange : .green)
+                    
+                    Text("(\(costWindow.multiplier)x Multiplier)")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                }
+            }
+            
+            Spacer()
+            
+            Image(systemName: costWindow == .peak ? "flame.fill" : "leaf.fill")
+                .foregroundColor(costWindow == .peak ? .orange : .green)
+                .font(.caption)
+        }
+        .padding(.horizontal, 4)
     }
     
     private func errorView(_ errorMessage: String) -> some View {
