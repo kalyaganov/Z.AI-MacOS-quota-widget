@@ -115,6 +115,25 @@ struct MenuBarView: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 4)
+            
+            // Reached limits reset indicators
+            let reachedLimits = viewModel.quotaLimits.filter { ($0.isToken5HourLimit || $0.isTokenWeeklyLimit || $0.isTimeLimit) && $0.isReached }
+            if !reachedLimits.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(reachedLimits) { limit in
+                        HStack(spacing: 6) {
+                            Image(systemName: "clock.badge.exclamationmark")
+                                .foregroundColor(.red)
+                                .font(.caption)
+                            
+                            Text("\(limit.displayType.replacingOccurrences(of: " Usage", with: "")) reset in \(limit.formattedResetTime ?? "a few minutes")")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                .padding(.top, 4)
+            }
         }
     }
     
