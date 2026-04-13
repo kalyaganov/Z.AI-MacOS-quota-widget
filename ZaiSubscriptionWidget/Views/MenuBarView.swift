@@ -65,6 +65,9 @@ struct MenuBarView: View {
             Divider()
             quotaSection
             
+            Divider()
+            glmInfoSection
+            
             if let error = viewModel.error {
                 Divider()
                 errorView(error)
@@ -132,6 +135,76 @@ struct MenuBarView: View {
                     }
                     .frame(height: 8)
                 }
+            }
+        }
+    }
+    
+    private var quotaSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Quota Usage")
+                .font(.headline)
+            
+            ForEach(viewModel.quotaLimits.filter { $0.isToken5HourLimit || $0.isTokenWeeklyLimit || $0.isTimeLimit }) { limit in
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text(limit.displayType)
+                            .font(.subheadline)
+                        Spacer()
+                        Text(limit.formattedPercentage)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                    }
+                    
+                    GeometryReader { geometry in
+                        ZStack(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Color.secondary.opacity(0.2))
+                                .frame(height: 8)
+                            
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(progressColor(for: limit.percentageValue))
+                                .frame(width: geometry.size.width * min(limit.percentageValue / 100, 1), height: 8)
+                        }
+                    }
+                    .frame(height: 8)
+                    
+                    if limit.isReached {
+                        Text("Reset in \(limit.formattedResetTime ?? "a few minutes")")
+                            .font(.caption2)
+                            .foregroundColor(.red)
+                    }
+                }
+            }
+        }
+    }
+    
+    private var glmInfoSection: some View {
+        let costWindow = viewModel.currentCostWindow
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("GLM-5 Usage Info")
+                    .font(.headline)
+                Spacer()
+                HStack(spacing: 4) {
+                    Image(systemName: costWindow == .peak ? "flame.fill" : "leaf.fill")
+                    Text("\(costWindow.multiplier)x")
+                        .fontWeight(.bold)
+                }
+                .foregroundColor(costWindow == .peak ? .orange : .green)
+            }
+            
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text("Peak Hours:")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    Text("14:00 – 18:00 (UTC+8)")
+                        .font(.subheadline)
+                }
+                
+                Text(costWindow == .peak ? "Currently in peak hours (3x usage)." : "Currently off-peak (\(costWindow.multiplier)x usage).")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
         }
     }
