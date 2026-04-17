@@ -2,111 +2,132 @@ import SwiftUI
 
 struct MenuBarView: View {
     @ObservedObject var viewModel: UsageViewModel
-    let onOpenSettings: () -> Void
+    var onOpenSettings: () -> Void
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            headerView
-            
-            Divider()
-            
-            if let error = viewModel.lastError {
-                errorView(error)
-            } else if viewModel.quotaLimits.isEmpty {
-                if viewModel.isLoading {
-                    HStack {
-                        Spacer()
-                        ProgressView("Loading quota...")
-                            .scaleEffect(0.8)
-                        Spacer()
-                    }
-                } else {
-                    Text("No quota information available.")
-                        .foregroundColor(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                }
+        VStack(alignment: .leading, spacing: 12) {
+            if !viewModel.hasAPIKey {
+                noAPIKeyView
+            } else if viewModel.isLoading && viewModel.quotaLimits.isEmpty {
+                loadingView
             } else {
-                quotaSection
+                contentView
             }
-            
-            Divider()
-            
-            footerView
         }
         .padding()
-        .frame(width: 300)
+        .frame(width: 320)
+        .onAppear {
+            if viewModel.hasAPIKey && viewModel.quotaLimits.isEmpty {
+                Task { await viewModel.refresh() }
+            }
+        }
     }
     
-    private var headerView: some View {
-        HStack {
-            Image("MenuBarIcon")
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 20, height: 20)
+    private var noAPIKeyView: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "person.badge.plus")
+                .font(.largeTitle)
+                .foregroundColor(.secondary)
             
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Z.AI Subscription")
-                    .font(.headline)
-                
-                if let account = viewModel.currentAccount {
-                    HStack(spacing: 4) {
-                        Text(account.email)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        
-                        if viewModel.accounts.count > 1 {
-                            Menu {
-                                ForEach(viewModel.accounts) { acc in
-                                    Button(acc.email) {
-                                        viewModel.switchAccount(acc)
-                                    }
-                                }
-                            } label: {
-                                Image(systemName: "chevron.up.down")
-                                    .font(.system(size: 8))
-                                    .foregroundColor(.secondary)
-                            }
-                            .menuStyle(.borderlessButton)
-                            .fixedSize()
-                        }
-                    }
-                }
+            Text("Add an Account")
+                .font(.headline)
+            
+            Text("Add your Z.AI account in Settings to view usage.")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+            
+            Button("Open Settings") {
+                onOpenSettings()
+            }
+            .buttonStyle(.borderedProminent)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 20)
+    }
+    
+    private var loadingView: some View {
+        VStack(spacing: 12) {
+            ProgressView()
+                .scaleEffect(1.2)
+            Text("Loading usage data...")
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 40)
+    }
+    
+    private var contentView: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Account picker header
+            accountPickerView
+            
+            Divider()
+            quotaSection
+            
+            Divider()
+            costWindowSection
+            
+            if !viewModel.modelUsage.isEmpty {
+                Divider()
+                modelUsageSection
             }
             
-            Spacer()
+            if !viewModel.toolUsage.isEmpty {
+                Divider()
+                toolUsageSection
+            }
+            
+            if let error = viewModel.error {
+                Divider()
+                errorView(error)
+            }
+            
+            Divider()
+            footerView
+        }
+    }
+    
+    private var accountPickerView: some View {
+        Group {
+            if viewModel.accounts.count > 1 {
+                // Show picker when multiple accounts exist
+                Picker("", selection: Binding(
+                    get: { viewModel.activeAccount ?? Account(name: "", apiKey: "") },
+                    set: { viewModel.switchToAccount($0) }
+                )) {
+                    ForEach(viewModel.accounts) { account in
+                        Text(account.name).tag(account)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(maxWidth: .infinity)
+            } else if let account = viewModel.activeAccount {
+                // Show single account name when only one exists
+                HStack {
+                    Image(systemName: "person.circle.fill")
+                        .foregroundColor(.secondary)
+                    Text(account.name)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                }
+            }
         }
     }
     
     private var quotaSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("Quota Usage")
                 .font(.headline)
             
-            ForEach(viewModel.quotaLimits.filter { $0.isToken5HourLimit || $0.isTokenWeeklyLimit || $0.isTimeLimit }) { limit in
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text(limit.displayType)
-                            .font(.subheadline)
-                        Spacer()
-                        Text(limit.formattedPercentage)
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                    }
-                    
-                    GeometryReader { geometry in
-                        ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(Color.secondary.opacity(0.2))
-                                .frame(height: 8)
-                            
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(progressColor(for: limit.percentageValue))
-                                .frame(width: geometry.size.width * min(limit.percentageValue / 100, 1), height: 8)
-                        }
-                    }
-                    .frame(height: 8)
-                }
+            HStack(alignment: .bottom, spacing: 24) {
+                quotaBar(label: "5", limit: viewModel.quotaLimits.first { $0.isToken5HourLimit })
+                quotaBar(label: "w", limit: viewModel.quotaLimits.first { $0.isTokenWeeklyLimit })
+                quotaBar(label: "m", limit: viewModel.quotaLimits.first { $0.isTimeLimit })
             }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 4)
             
             // Reached limits reset indicators
             let reachedLimits = viewModel.quotaLimits.filter { ($0.isToken5HourLimit || $0.isTokenWeeklyLimit || $0.isTimeLimit) && $0.isReached }
@@ -126,6 +147,108 @@ struct MenuBarView: View {
                 }
                 .padding(.top, 4)
             }
+        }
+    }
+    
+    private var costWindowSection: some View {
+        let costWindow = viewModel.currentCostWindow
+        return HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("GLM-5 Usage Window")
+                    .font(.caption2)
+                    .fontWeight(.medium)
+                    .foregroundColor(.secondary)
+                
+                HStack(spacing: 4) {
+                    Text(costWindow.displayName)
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(costWindow == .peak ? .orange : .green)
+                    
+                    Text("(\(costWindow.multiplier)x Multiplier)")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                }
+            }
+            
+            Spacer()
+            
+            Image(systemName: costWindow == .peak ? "flame.fill" : "leaf.fill")
+                .foregroundColor(costWindow == .peak ? .orange : .green)
+                .font(.caption)
+        }
+        .padding(.horizontal, 4)
+    }
+    
+    private var modelUsageSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Model Usage")
+                .font(.headline)
+            
+            ForEach(viewModel.modelUsage) { item in
+                HStack {
+                    Text(item.model)
+                        .font(.subheadline)
+                    Spacer()
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("\(item.formatNumber(item.totalTokens)) tokens")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        Text("In: \(item.formatNumber(item.inputTokens)) · Out: \(item.formatNumber(item.outputTokens))")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+        }
+    }
+    
+    private var toolUsageSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Tool Usage")
+                .font(.headline)
+            
+            ForEach(viewModel.toolUsage) { item in
+                HStack {
+                    Text(item.tool)
+                        .font(.subheadline)
+                    Spacer()
+                    Text(item.formattedCallCount)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                }
+            }
+        }
+    }
+
+    private func quotaBar(label: String, limit: QuotaLimitItem?) -> some View {
+        VStack(spacing: 6) {
+            if let limit = limit {
+                Text(String(format: "%.0f%%", limit.percentageValue))
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(.secondary)
+                
+                ZStack(alignment: .bottom) {
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(Color.secondary.opacity(0.15))
+                        .frame(width: 14, height: 80)
+                    
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(progressColor(for: limit.percentageValue))
+                        .frame(width: 14, height: 80 * min(limit.percentageValue / 100, 1))
+                }
+                .help("\(limit.displayType): \(limit.formattedPercentage)")
+            } else {
+                Text("N/A")
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+                
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(Color.secondary.opacity(0.1))
+                    .frame(width: 14, height: 80)
+            }
+            
+            Text(label)
+                .font(.system(size: 12, weight: .bold))
         }
     }
     
