@@ -68,6 +68,16 @@ struct MenuBarView: View {
             Divider()
             costWindowSection
             
+            if !viewModel.modelUsage.isEmpty {
+                Divider()
+                modelUsageSection
+            }
+            
+            if !viewModel.toolUsage.isEmpty {
+                Divider()
+                toolUsageSection
+            }
+            
             if let error = viewModel.error {
                 Divider()
                 errorView(error)
@@ -167,6 +177,47 @@ struct MenuBarView: View {
                 .font(.caption)
         }
         .padding(.horizontal, 4)
+    }
+    
+    private var modelUsageSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Model Usage")
+                .font(.headline)
+            
+            ForEach(viewModel.modelUsage) { item in
+                HStack {
+                    Text(item.model)
+                        .font(.subheadline)
+                    Spacer()
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("\(item.formatNumber(item.totalTokens)) tokens")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        Text("In: \(item.formatNumber(item.inputTokens)) · Out: \(item.formatNumber(item.outputTokens))")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+        }
+    }
+    
+    private var toolUsageSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Tool Usage")
+                .font(.headline)
+            
+            ForEach(viewModel.toolUsage) { item in
+                HStack {
+                    Text(item.tool)
+                        .font(.subheadline)
+                    Spacer()
+                    Text(item.formattedCallCount)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                }
+            }
+        }
     }
 
     private func quotaBar(label: String, limit: QuotaLimitItem?) -> some View {
