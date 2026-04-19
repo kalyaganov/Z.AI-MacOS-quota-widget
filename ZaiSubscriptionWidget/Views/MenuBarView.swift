@@ -65,6 +65,19 @@ struct MenuBarView: View {
             Divider()
             quotaSection
             
+            Divider()
+            glmInfoSection
+            
+            if !viewModel.modelUsage.isEmpty {
+                Divider()
+                modelUsageSection
+            }
+            
+            if !viewModel.toolUsage.isEmpty {
+                Divider()
+                toolUsageSection
+            }
+            
             if let error = viewModel.error {
                 Divider()
                 errorView(error)
@@ -104,7 +117,7 @@ struct MenuBarView: View {
     }
     
     private var quotaSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("Quota Usage")
                 .font(.headline)
             
@@ -131,6 +144,84 @@ struct MenuBarView: View {
                         }
                     }
                     .frame(height: 8)
+                    
+                    if limit.isReached {
+                        Text("Reset in \(limit.formattedResetTime ?? "a few minutes")")
+                            .font(.caption2)
+                            .foregroundColor(.red)
+                    }
+                }
+            }
+        }
+    }
+    
+    private var glmInfoSection: some View {
+        let costWindow = viewModel.currentCostWindow
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("GLM-5 Usage Info")
+                    .font(.headline)
+                Spacer()
+                HStack(spacing: 4) {
+                    Image(systemName: costWindow == .peak ? "flame.fill" : "leaf.fill")
+                    Text("\(costWindow.multiplier)x")
+                        .fontWeight(.bold)
+                }
+                .foregroundColor(costWindow == .peak ? .orange : .green)
+            }
+            
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text("Peak Hours:")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    Text("14:00 – 18:00 (UTC+8)")
+                        .font(.subheadline)
+                }
+                
+                Text(costWindow == .peak ? "Currently in peak hours (3x usage)." : "Currently off-peak (\(costWindow.multiplier)x usage).")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+    
+    private var modelUsageSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Model Usage")
+                .font(.headline)
+            
+            ForEach(viewModel.modelUsage) { item in
+                HStack {
+                    Text(item.displayName)
+                        .font(.subheadline)
+                    Spacer()
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("\(item.formatNumber(item.totalTokens)) tokens")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        Text("In: \(item.formatNumber(item.inputTokens)) · Out: \(item.formatNumber(item.outputTokens))")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+        }
+    }
+    
+    private var toolUsageSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Tool Usage")
+                .font(.headline)
+            
+            ForEach(viewModel.toolUsage) { item in
+                HStack {
+                    Text(item.displayName)
+                        .font(.subheadline)
+                    Spacer()
+                    Text(item.formattedCallCount)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
                 }
             }
         }
