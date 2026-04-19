@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import AppKit
 
 @MainActor
 class UsageViewModel: ObservableObject {
@@ -19,6 +20,7 @@ class UsageViewModel: ObservableObject {
     @Published var modelUsage: [ModelUsageItem] = []
     @Published var toolUsage: [ToolUsageItem] = []
     @Published var quotaLimits: [QuotaLimitItem] = []
+    @Published var accountQuotaLimits: [UUID: [QuotaLimitItem]] = [:]
     
     @Published var isLoading = false
     @Published var error: String?
@@ -43,6 +45,30 @@ class UsageViewModel: ObservableObject {
             UserDefaults.standard.set(refreshInterval.rawValue, forKey: "refreshInterval")
             updateTimer()
         }
+    }
+    
+    @Published var showDockIcon = false {
+        didSet {
+            UserDefaults.standard.set(showDockIcon, forKey: "showDockIcon")
+            updateActivationPolicy()
+        }
+    }
+    
+    @Published var showMenuBarCharts = true {
+        didSet {
+            UserDefaults.standard.set(showMenuBarCharts, forKey: "showMenuBarCharts")
+        }
+    }
+    
+    @Published var showGLMMultiplier = true {
+        didSet {
+            UserDefaults.standard.set(showGLMMultiplier, forKey: "showGLMMultiplier")
+        }
+    }
+    
+    private func updateActivationPolicy() {
+        let policy: NSApplication.ActivationPolicy = showDockIcon ? .regular : .accessory
+        NSApp.setActivationPolicy(policy)
     }
     
     private var refreshTimer: Timer?
@@ -84,6 +110,51 @@ class UsageViewModel: ObservableObject {
         
         var seconds: TimeInterval {
             Double(rawValue * 60)
+        }
+    }
+    
+    enum CostWindow {
+        case peak
+        case offPeak
+        
+        var multiplier: Int {
+            switch self {
+            case .peak: return 3
+            case .offPeak:
+                // Benefit: 1x through end of April 2026
+                let now = Date()
+                var components = DateComponents()
+                components.year = 2026
+                components.month = 5
+                components.day = 1
+                if let endOfApril = Calendar.current.date(from: components), now < endOfApril {
+                    return 1
+                }
+                return 2
+            }
+        }
+        
+        var displayName: String {
+            switch self {
+            case .peak: return "Peak"
+            case .offPeak: return "Off-Peak"
+            }
+        }
+    }
+    
+    var currentCostWindow: CostWindow {
+        var calendar = Calendar.current
+        if let timezone = TimeZone(identifier: "Asia/Shanghai") {
+            calendar.timeZone = timezone
+        }
+        
+        let now = Date()
+        let hour = calendar.component(.hour, from: now)
+        
+        if hour >= 14 && hour < 18 {
+            return .peak
+        } else {
+            return .offPeak
         }
     }
     
@@ -129,6 +200,15 @@ class UsageViewModel: ObservableObject {
            let interval = RefreshInterval(rawValue: intervalRaw) {
             refreshInterval = interval
         }
+        
+        showDockIcon = UserDefaults.standard.bool(forKey: "showDockIcon")
+        if UserDefaults.standard.object(forKey: "showMenuBarCharts") != nil {
+            showMenuBarCharts = UserDefaults.standard.bool(forKey: "showMenuBarCharts")
+        }
+        if UserDefaults.standard.object(forKey: "showGLMMultiplier") != nil {
+            showGLMMultiplier = UserDefaults.standard.bool(forKey: "showGLMMultiplier")
+        }
+        updateActivationPolicy()
     }
     
     private func updateTimer() {
@@ -153,24 +233,72 @@ class UsageViewModel: ObservableObject {
         isLoading = true
         error = nil
         
-        do {
-            self.quotaLimits = try await apiService.fetchQuotaLimit(apiKey: currentKey)
-            self.lastRefresh = Date()
-        } catch {
-            self.error = error.localizedDescription
+        // Use a task group or individual try? to ensure quota always loads even if others fail
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask {
+                do {
+                    let limits = try await self.apiService.fetchQuotaLimit(apiKey: currentKey)
+                    await MainActor.run {
+                        self.quotaLimits = limits
+                    }
+                } catch {
+                    print("Failed to fetch primary quota: \(error)")
+                    await MainActor.run {
+                        self.error = error.localizedDescription
+                    }
+                }
+            }
+            
+            // Fetch quotas for all accounts configured to show in menu bar
+            for account in accounts where account.showInMenuBar {
+                group.addTask {
+                    do {
+                        let limits = try await self.apiService.fetchQuotaLimit(apiKey: account.apiKey)
+                        await MainActor.run {
+                            self.accountQuotaLimits[account.id] = limits
+                        }
+                    } catch {
+                        print("Failed to fetch quota for account \(account.name): \(error)")
+                    }
+                }
+            }
+            
+            group.addTask {
+                do {
+                    let models = try await self.apiService.fetchModelUsage(apiKey: currentKey)
+                    await MainActor.run {
+                        self.modelUsage = models
+                    }
+                } catch {
+                    print("Failed to fetch model usage: \(error)")
+                    // Non-critical failure, don't show error to user
+                }
+            }
+            
+            group.addTask {
+                do {
+                    let tools = try await self.apiService.fetchToolUsage(apiKey: currentKey)
+                    await MainActor.run {
+                        self.toolUsage = tools
+                    }
+                } catch {
+                    print("Failed to fetch tool usage: \(error)")
+                    // Non-critical failure, don't show error to user
+                }
+            }
         }
         
+        self.lastRefresh = Date()
         isLoading = false
     }
     
     // MARK: - Account Management Methods
     
-    func addAccount(name: String, apiKey: String) {
+    func addAccount(name: String, apiKey: String, showInMenuBar: Bool = true) {
         let trimmedKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedKey.isEmpty else { return }
-        
-        let account = Account(name: name.trimmingCharacters(in: .whitespacesAndNewlines), apiKey: trimmedKey)
-        
+
+        let account = Account(name: name.trimmingCharacters(in: .whitespacesAndNewlines), apiKey: trimmedKey, showInMenuBar: showInMenuBar)        
         do {
             try KeychainService.shared.saveAccount(account)
             accounts.append(account)

@@ -12,8 +12,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             let hostingView = NSHostingView(rootView: settingsView)
             
             let window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 400, height: 320),
-                styleMask: [.titled, .closable],
+                contentRect: NSRect(x: 0, y: 0, width: 450, height: 400),
+                styleMask: [.titled, .closable, .resizable],
                 backing: .buffered,
                 defer: false
             )
@@ -25,7 +25,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             settingsWindow = window
         }
         
-        NSApp.setActivationPolicy(.regular)
+        if UsageViewModel.shared.showDockIcon {
+            NSApp.setActivationPolicy(.regular)
+        } else {
+            NSApp.setActivationPolicy(.accessory)
+        }
+        
         NSApp.activate(ignoringOtherApps: true)
         settingsWindow?.makeKeyAndOrderFront(nil)
     }
@@ -37,10 +42,12 @@ struct ZaiSubscriptionWidgetApp: App {
     @StateObject private var viewModel = UsageViewModel.shared
     
     var body: some Scene {
-        MenuBarExtra("Z.AI", image: "MenuBarIcon") {
+        MenuBarExtra {
             MenuBarView(viewModel: viewModel, onOpenSettings: {
                 appDelegate.showSettingsWindow()
             })
+        } label: {
+            MenuBarLabelView(viewModel: viewModel)
         }
         .menuBarExtraStyle(.window)
     }
